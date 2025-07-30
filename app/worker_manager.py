@@ -48,19 +48,25 @@ def save_error_case(sub: Submission, result: ProcessExecuteResult | None = None,
         logger.exception(f'Failed to save error case for submission {sub.sub_id}')
 
 
-def executor_factory(type: str) -> ScriptExecutor:
+def executor_factory(type: str, timeout: float, memory_limit: int, cpu_core: int) -> ScriptExecutor:
     if type == 'python':
         return PythonExecutor(
             run_cl=app_config.PYTHON_EXECUTE_COMMAND,
-            timeout=app_config.MAX_EXECUTION_TIME,
-            memory_limit=app_config.MAX_MEMORY * 1024 * 1024,
+            # timeout=app_config.MAX_EXECUTION_TIME,
+            timeout=timeout,
+            # memory_limit=app_config.MAX_MEMORY * 1024 * 1024,
+            memory_limit=memory_limit * 1024 * 1024,
+            cpu_core=cpu_core
         )
     elif type == 'cpp':
         return CppExecutor(
             compiler_cl=app_config.CPP_COMPILE_COMMAND,
             run_cl=app_config.CPP_EXECUTE_COMMAND,
-            timeout=app_config.MAX_EXECUTION_TIME,
-            memory_limit=app_config.MAX_MEMORY * 1024 * 1024,
+            # timeout=app_config.MAX_EXECUTION_TIME,
+            timeout=timeout,
+            # memory_limit=app_config.MAX_MEMORY * 1024 * 1024,
+            memory_limit=memory_limit * 1024 * 1024,
+            cpu_core=cpu_core
         )
     else:
         raise ValueError(f'Unsupported type: {type}')
@@ -68,7 +74,7 @@ def executor_factory(type: str) -> ScriptExecutor:
 
 def judge(sub: Submission):
     try:
-        executor = executor_factory(sub.type)
+        executor = executor_factory(type=sub.type, timeout=sub.timeout, memory_limit=sub.memory_limit, cpu_core=sub.cpu_core)
         result = executor.execute_script(sub.solution, sub.input)
 
         success = result.success
@@ -99,6 +105,11 @@ def judge(sub: Submission):
 
 
 class Worker(Process):
+    def __init__(self):
+        super().__init__()  
+        self.MAX_EXECUTION_TIME = app_config.MAX_EXECUTION_TIME
+        self.MAX_PROCESS_TIME = app_config.MAX_PROCESS_TIME
+        
     def _run_loop(self):
         worker_id = str(uuid.uuid4())
         redis_queue = connect_queue(False)
@@ -133,6 +144,8 @@ class Worker(Process):
                     logger.warning(f'Work {payload.work_id} lifetime ({lifetime:.2f}>{app_config.MAX_QUEUE_WORK_LIFE_TIME}) timed out. '
                                 f'Ignored. Concurrency is too hight?')
                     continue
+                self.MAX_EXECUTION_TIME = payload.submission.timeout or app_config.MAX_EXECUTION_TIME
+                self.MAX_PROCESS_TIME = self.MAX_EXECUTION_TIME + 5  
                 result = judge(payload.submission)
             except ValidationError:
                 logger.exception(f'Failed to parse payload {payload_json}')
@@ -232,7 +245,8 @@ class WorkerManager:
                     is_hanged = 0
                     for subp in worker_p.children(recursive=True):
                         is_busy = 1
-                        if subp.is_running() and time() - subp.create_time() > app_config.MAX_PROCESS_TIME:
+                        # This's logic may need to change
+                        if subp.is_running() and time() - subp.create_time() > worker.MAX_PROCESS_TIME:
                             is_hanged = 1
                             logger.info(f'Worker {subp.pid} is running for {time() - subp.create_time()} seconds. Terminating...')
                             nothrow_killpg(pid=subp.pid)

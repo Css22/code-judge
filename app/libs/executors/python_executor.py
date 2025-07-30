@@ -20,6 +20,16 @@ def _exec_prepare():
     # preventing multi-threading for numpy
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
+    def _exec_limit_cpu_cores(cpu_core: int):
+        cpu_total = os.cpu_count() or 1
+        allowed   = set(range(min(cpu_core, cpu_total)))
+        try:
+            os.sched_setaffinity(0, allowed)
+        except Exception:
+            pass
+        
+        
+
     def _exec_set_alarm_timeout(timeout):
         signal.signal(signal.SIGALRM, _exec_time_exceeded)
         signal.alarm(timeout)
@@ -42,7 +52,7 @@ def _exec_prepare():
         soft, hard = resource.getrlimit(resource.RLIMIT_CPU)
         resource.setrlimit(resource.RLIMIT_CPU, (seconds, hard))
         # Just use its default behavior to terminate the process.
-        # signal.signal(signal.SIGXCPU, _exec_time_exceeded)
+        # signal.signal(signal.SIGXCPU, _exec_time_exceeded)       
 
     def _exec_limit_memory(maxsize):
         soft, hard = resource.getrlimit(resource.RLIMIT_AS)
@@ -55,6 +65,9 @@ def _exec_prepare():
 
     if {{memory_limit}}:
         _exec_limit_memory({{memory_limit}})
+
+    if {{cpu_core}}:
+        _exec_limit_cpu_cores({{cpu_core}})
 
     return time.perf_counter()
 
@@ -76,7 +89,7 @@ _exec_end()
 """.strip()
 
 class PythonExecutor(ScriptExecutor):
-    def __init__(self, run_cl: str, timeout: int = None, memory_limit: int = None):
+    def __init__(self, run_cl: str, timeout: int = None, memory_limit: int = None, cpu_core: int = None):
         self.timeout = timeout
         self.memory_limit = (
             memory_limit + 128 * 1024 * 1024  # extra 128MB for python overhead
@@ -84,11 +97,12 @@ class PythonExecutor(ScriptExecutor):
             else None
         )
         self.run_cl = run_cl
+        self.cpu_core = cpu_core
 
     def setup_command(self, tmp_path: str, script: str):
         source_path = f"{tmp_path}/source.py"
         with open(source_path, mode='w') as f:
-            f.write(PRE_TEMPLATE.format(timeout=self.timeout, memory_limit=self.memory_limit))
+            f.write(PRE_TEMPLATE.format(timeout=self.timeout, memory_limit=self.memory_limit, cpu_core=self.cpu_core))
             f.write("\n")
             f.write(script)
             f.write("\n")
