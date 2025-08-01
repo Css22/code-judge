@@ -51,11 +51,12 @@ ResourceLimit _exec_resource_limit = ResourceLimit({timeout}, {memory_limit});
 
 
 class CppExecutor(ScriptExecutor):
-    def __init__(self, compiler_cl: str, run_cl:str, timeout: int = None, memory_limit: int = None):
+    def __init__(self, compiler_cl: str, run_cl:str, timeout: int = None, memory_limit: int = None, cpu_core: int = None):
         self.compiler_cl = compiler_cl
         self.run_cl = run_cl
         self.timeout = timeout
         self.memory_limit = memory_limit
+        self.cpu_core = cpu_core
 
     def setup_command(self, tmp_path: str, script: str) -> Generator[list[str], ProcessExecuteResult, None]:
         source_path = f"{tmp_path}/source.cpp"
