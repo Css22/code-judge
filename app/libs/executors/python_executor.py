@@ -20,16 +20,6 @@ def _exec_prepare():
     # preventing multi-threading for numpy
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
-    def _exec_limit_cpu_cores(cpu_core: int):
-        cpu_total = os.cpu_count() or 1
-        allowed   = set(range(min(cpu_core, cpu_total)))
-        try:
-            os.sched_setaffinity(0, allowed)
-        except Exception:
-            pass
-        
-        
-
     def _exec_set_alarm_timeout(timeout):
         signal.signal(signal.SIGALRM, _exec_time_exceeded)
         signal.alarm(timeout)
@@ -66,8 +56,6 @@ def _exec_prepare():
     if {{memory_limit}}:
         _exec_limit_memory({{memory_limit}})
 
-    if {{cpu_core}}:
-        _exec_limit_cpu_cores({{cpu_core}})
 
     return time.perf_counter()
 
@@ -119,7 +107,7 @@ class PythonExecutor(ScriptExecutor):
             "systemd-run", "--user", "--scope", "--quiet",
             "-p", f"CPUQuota={quota}%"
         ]
-        
+
         cmd = systemd_prefix + python_cmd
         yield cmd
 

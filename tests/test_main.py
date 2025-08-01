@@ -538,7 +538,7 @@ if __name__ == "__main__":
     assert response.status_code == 200
     assert response.json()['success']
     assert response.json()['run_success']
-
+    
 @pytest.mark.parametrize("type", ["judge", "run"])
 @pytest.mark.parametrize("batch_type", ["batch", "long-batch"])
 def test_python_cpu_core_limit_batch(test_client, type, batch_type):
