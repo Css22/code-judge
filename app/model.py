@@ -17,7 +17,7 @@ class Submission(BaseModel):
     expected_output: str | None = None
 
     #Resource fields
-    timeout: float | None = app_config.MAX_EXECUTION_TIME
+    timeout: int | None = app_config.MAX_EXECUTION_TIME
     cpu_core : int | None = 1 
     memory_limit : int | None = app_config.MAX_MEMORY
 

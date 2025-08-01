@@ -49,7 +49,7 @@ async def judge(redis_queue: RedisQueue, submission: Submission):
 
 async def _judge_batch_impl(redis_queue: RedisQueue, subs: list[Submission], long_batch=False):
     start_time = time()
-    # Provide the max_wait_time for  the batch processing
+    # Provide the max_wait_time for the batch processing
     max_wait_time = app_config.LONG_BATCH_MAX_QUEUE_WAIT_TIME if long_batch else app_config.MAX_QUEUE_WAIT_TIME
     for sub in subs:
         sub_wait_time = sub.timeout + 5 + app_config.MAX_QUEUE_WORK_LIFE_TIME
@@ -84,7 +84,7 @@ async def _judge_batch_impl(redis_queue: RedisQueue, subs: list[Submission], lon
     async def _pop_results(queue_names: list[str], timeout: int):
         name_results = await _sync_pop(queue_names)
         if not name_results and timeout > 0:
-            name_results = await _async_pop(queue_names, min(timeout, app_config.MAX_PROCESS_TIME))
+            name_results = await _async_pop(queue_names, timeout)
         return name_results
 
     async def _get_result(payloads: list[WorkPayload], max_chunk_wait_time):
@@ -122,7 +122,7 @@ async def _judge_batch_impl(redis_queue: RedisQueue, subs: list[Submission], lon
                     # so we only wait for app_config.MAX_PROCESS_TIME for them to finish.
                     # if it is still not finished, we assume some error happened.
                     # and we can break the loop.
-                    if time() - start_working_time > app_config.MAX_PROCESS_TIME:
+                    if time() - start_working_time > max_chunk_wait_time:
                         logger.warning(f'No result for {len(left_result_queue_names)} submissions. '
                                        f'Assuming all submissions are timed out.')
                         logger.warning('This is mostly caused by redis OOM or workers killed or potential bug. ')

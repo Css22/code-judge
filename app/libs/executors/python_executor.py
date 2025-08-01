@@ -108,10 +108,20 @@ class PythonExecutor(ScriptExecutor):
             f.write("\n")
             f.write(POST_TEMPLATE)
             f.flush()
-        yield shlex.split(self.run_cl.format(
+
+        python_cmd =  shlex.split(self.run_cl.format(
             source=shlex.quote(source_path),
             workdir=shlex.quote(str(tmp_path))
         ))
+
+        quota = int(round(self.cpu_core * 100))
+        systemd_prefix = [
+            "systemd-run", "--user", "--scope", "--quiet",
+            "-p", f"CPUQuota={quota}%"
+        ]
+        
+        cmd = systemd_prefix + python_cmd
+        yield cmd
 
     def process_result(self, result):
         if SCRIPT_ENDING_MARK in result.stdout:

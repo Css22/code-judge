@@ -296,7 +296,7 @@ with open('test.txt', 'w') as f:
         "input": "",
         "expected_output": ""
     }
-    response = test_client.post(f'{type}', json=data)
+    response = test_client.post(f'{type}/', json=data)
     print(response.json())
     assert response.status_code == 200
     assert response.json()['success']
@@ -324,3 +324,302 @@ with open('../test.txt', 'w') as f:
     assert response.status_code == 200
 
     print(f"Jailbreak Status (Is sandbox enabled): {not Path('/tmp/test.txt').exists()}")
+
+@pytest.mark.parametrize("type", ["judge", "run"])
+def test_python_time_control(test_client, type):
+    code = """
+import time
+result=input()
+time.sleep(20)
+print(result)
+"""
+    data = {
+        "type": "python",
+        "solution": code,
+        "input": "a",
+        "expected_output": "a",
+        'timeout': 30
+    }
+    response = test_client.post(f'{type}', json=data)
+    print(response.json())
+    assert response.status_code == 200
+    assert response.json()['success']
+    assert response.json()['run_success']
+
+
+@pytest.mark.parametrize("type", ["judge", "run"])
+def test_python_time_control_timeout(test_client, type):
+    code = """
+import time
+time.sleep(60)
+"""
+    data = {
+        "type": "python",
+        "solution": code,
+        "input": "",
+        "expected_output": "",
+        'timeout': 50
+    }
+    response = test_client.post(f'{type}', json=data)
+    print(response.json())
+    assert response.status_code == 200
+    assert not response.json()['success']
+    assert not response.json()['run_success']
+    assert response.json()['reason'] == 'worker_timeout'
+    if type == 'run':
+        assert response.json()['stdout'].strip() == 'Suicide from timeout.'
+
+@pytest.mark.parametrize("type", ["judge", "run"])
+@pytest.mark.parametrize("batch_type", ["batch", "long-batch"])
+def test_python_time_control_batch(test_client, type, batch_type):
+    data = {
+        'type': 'batch',
+        "submissions": [{
+        "type": "python",
+        "solution": """
+import time
+result=input()
+time.sleep(40)
+print(result)""",
+        "input": "b",
+        "expected_output": "b",
+        "timeout": 50
+        },{
+        "type": "python",
+        "solution": """
+import time
+result=input()
+time.sleep(20)
+print(result)""",
+        "input": "a",
+        "expected_output": "a",
+        "timeout": 10
+        }]
+    }
+    response = test_client.post(f'{type}/{batch_type}', json=data)
+
+    print(response.json())
+    assert response.status_code == 200
+    results = response.json()['results']
+
+    assert len(results) == 2
+    assert  results[0]['success']
+    assert  results[0]['run_success']
+    assert not results[1]['success']
+    assert not results[1]['run_success']
+    assert results[1]['reason'] == 'worker_timeout'
+
+@pytest.mark.parametrize("type", ["judge", "run"])
+@pytest.mark.parametrize("batch_type", ["batch", "long-batch"])
+def test_python_memory_limit_batch(test_client, type, batch_type):
+    data = {
+        'type': 'batch',
+        "submissions": [{
+        "type": "python",
+        "solution": """
+import ctypes, time
+result=input()
+time.sleep(1)
+buf = ctypes.create_string_buffer(600 * 1024 * 1024) # 600MB
+print(result)""",
+        "input": "b",
+        "expected_output": "b",
+        'memory_limit': 650 # 650MB
+        },{
+        "type": "python",
+        "solution": """
+import ctypes, time
+result=input()
+buf = ctypes.create_string_buffer(600 * 1024 * 1024) # 600MB
+time.sleep(1)
+print(result)""",
+        "input": "a",
+        "expected_output": "a",
+        'memory_limit': 400 # 400MB
+        }]
+    }
+    response = test_client.post(f'{type}/{batch_type}', json=data)
+
+    print(response.json())
+    assert response.status_code == 200
+    results = response.json()['results']
+
+    assert len(results) == 2
+    assert  results[0]['success']
+    assert  results[0]['run_success']
+    assert not results[1]['success']
+    assert not results[1]['run_success']
+
+@pytest.mark.parametrize("type", ["judge", "run"])
+def test_python_cpu_core_limit(test_client, type):
+    code = """
+import os, multiprocessing, time, math
+
+def burn_cpu(seconds=10):
+    start = time.process_time()
+    while time.process_time() - start < seconds:
+        math.sqrt(123.456)   
+
+def main():
+    N_PROCS = 4
+    CPU_SEC = 10          
+
+    procs = [multiprocessing.Process(target=burn_cpu, args=(CPU_SEC,)) for _ in range(N_PROCS)]
+
+    wall_start = time.time()
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join()
+    wall_end = time.time()
+    if wall_end - wall_start < 11 and wall_end - wall_start > 9:
+        print("success")
+    else:
+        print("failed")
+if __name__ == "__main__":
+    main()
+
+"""
+    data = {
+        "type": "python",
+        "solution": code,
+        "input": "",
+        "expected_output": "success",
+        'timeout': 60,
+        'cpu_core': 4
+    }
+
+    response = test_client.post(f'{type}', json=data)
+    print(response.json())
+    assert response.status_code == 200
+    assert response.json()['success']
+    assert response.json()['run_success']
+
+@pytest.mark.parametrize("type", ["judge", "run"])
+def test_python_cpu_core_limit_exceed(test_client, type):
+    code = """
+import os, multiprocessing, time, math
+
+def burn_cpu(seconds=10):
+    start = time.process_time()
+    while time.process_time() - start < seconds:
+        math.sqrt(123.456)   
+
+def main():
+    N_PROCS = 4
+    CPU_SEC = 10          
+
+    procs = [multiprocessing.Process(target=burn_cpu, args=(CPU_SEC,)) for _ in range(N_PROCS)]
+
+    wall_start = time.time()
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join()
+    wall_end = time.time()
+    if wall_end - wall_start < 21 and wall_end - wall_start > 19:
+        print("success")
+    else:
+        print("failed")
+if __name__ == "__main__":
+    main()
+"""
+    data = {
+        "type": "python",
+        "solution": code,
+        "input": "",
+        "expected_output": "success",
+        'timeout': 60,
+        'cpu_core': 2
+    }
+
+    response = test_client.post(f'{type}', json=data)
+    print(response.json())
+    assert response.status_code == 200
+    assert response.json()['success']
+    assert response.json()['run_success']
+
+@pytest.mark.parametrize("type", ["judge", "run"])
+@pytest.mark.parametrize("batch_type", ["batch", "long-batch"])
+def test_python_cpu_core_limit_batch(test_client, type, batch_type):
+    data = {
+        'type': 'batch',
+        "submissions": [{
+        "type": "python",
+        "solution": """
+import os, multiprocessing, time, math
+
+def burn_cpu(seconds=10):
+    start = time.process_time()
+    while time.process_time() - start < seconds:
+        math.sqrt(123.456)   
+
+def main():
+    N_PROCS = 4
+    CPU_SEC = 10          
+
+    procs = [multiprocessing.Process(target=burn_cpu, args=(CPU_SEC,)) for _ in range(N_PROCS)]
+
+    wall_start = time.time()
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join()
+    wall_end = time.time()
+    if wall_end - wall_start < 11 and wall_end - wall_start > 9:
+        print("success")
+    else:
+        print("wall_end - wall_start")
+if __name__ == "__main__":
+    main()
+""",
+        "input": "",
+        "expected_output": "success",
+        'timeout': 60,
+        'cpu_core': 4
+        },{
+        "type": "python",
+        "solution": """
+import os, multiprocessing, time, math
+
+def burn_cpu(seconds=10):
+    start = time.process_time()
+    while time.process_time() - start < seconds:
+        math.sqrt(123.456)   
+
+def main():
+    N_PROCS = 16
+    CPU_SEC = 10          
+
+    procs = [multiprocessing.Process(target=burn_cpu, args=(CPU_SEC,)) for _ in range(N_PROCS)]
+
+    wall_start = time.time()
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join()
+    wall_end = time.time()
+    if wall_end - wall_start < 21 and wall_end - wall_start > 19:
+        print("success")
+    else:
+        print("wall_end - wall_start")
+if __name__ == "__main__":
+    main()
+""",
+        "input": "",
+        "expected_output": "success",
+        'timeout': 60,
+        'cpu_core': 8
+        }]
+    }
+    response = test_client.post(f'{type}/{batch_type}', json=data)
+
+    print(response.json())
+    assert response.status_code == 200
+    results = response.json()['results']
+
+    assert len(results) == 2
+    assert results[0]['success']
+    assert results[0]['run_success']
+    assert results[1]['success']
+    assert results[1]['run_success']
