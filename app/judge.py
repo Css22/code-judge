@@ -56,9 +56,6 @@ async def _judge_batch_impl(redis_queue: RedisQueue, subs: list[Submission], lon
         if sub_wait_time > max_wait_time:
             max_wait_time = sub_wait_time
 
-    # max_wait_time = app_config.LONG_BATCH_MAX_QUEUE_WAIT_TIME \
-    #     if long_batch else app_config.MAX_QUEUE_WAIT_TIME
-
     batch_chunk_size = app_config.MAX_LONG_BATCH_CHUNK_SIZE \
         if long_batch else app_config.MAX_BATCH_CHUNK_SIZE
     # use a hash tag to make sure all payloads are in the same slot in redis cluster
