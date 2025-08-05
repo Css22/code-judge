@@ -53,9 +53,7 @@ def executor_factory(type: str, timeout: int, memory_limit: int, cpu_core: int) 
     if type == 'python':
         return PythonExecutor(
             run_cl=app_config.PYTHON_EXECUTE_COMMAND,
-            # timeout=app_config.MAX_EXECUTION_TIME,
             timeout=timeout,
-            # memory_limit=app_config.MAX_MEMORY * 1024 * 1024,
             memory_limit=memory_limit * 1024 * 1024,
             cpu_core=cpu_core
         )
@@ -63,9 +61,7 @@ def executor_factory(type: str, timeout: int, memory_limit: int, cpu_core: int) 
         return CppExecutor(
             compiler_cl=app_config.CPP_COMPILE_COMMAND,
             run_cl=app_config.CPP_EXECUTE_COMMAND,
-            # timeout=app_config.MAX_EXECUTION_TIME,
             timeout=timeout,
-            # memory_limit=app_config.MAX_MEMORY * 1024 * 1024,
             memory_limit=memory_limit * 1024 * 1024,
             cpu_core=cpu_core
         )
@@ -107,7 +103,8 @@ def judge(sub: Submission):
 
 class Worker(Process):
     def __init__(self, shared_dict: dict):
-        super().__init__()  
+        super().__init__()
+        # local woker use shared_dict to set the timeout
         self.shared = shared_dict  
         self.worker_id = str(uuid.uuid4())
         
@@ -144,7 +141,7 @@ class Worker(Process):
                     logger.warning(f'Work {payload.work_id} lifetime ({lifetime:.2f}>{app_config.MAX_QUEUE_WORK_LIFE_TIME}) timed out. '
                                 f'Ignored. Concurrency is too hight?')
                     continue
-                # set the max  process time
+                # set the max process time
                 self.shared[self.worker_id] = payload.submission.timeout + 5
                 result = judge(payload.submission)
             except ValidationError:
@@ -204,6 +201,7 @@ class Worker(Process):
 
 class WorkerManager:
     def __init__(self):
+        # global dict shared with all workers for timeout control
         self.shared = Manager().dict()
         max_workers = app_config.MAX_WORKERS
         self.workers: list[Worker] = []
@@ -242,12 +240,12 @@ class WorkerManager:
             else:
                 try:
                     worker_p = psutil.Process(worker.pid)
-                    MAX_PROCESS_TIME = self.shared.get(worker.worker_id, app_config.MAX_PROCESS_TIME)
+                    max_process_time = self.shared.get(worker.worker_id, app_config.MAX_PROCESS_TIME)
                     is_busy = 0
                     is_hanged = 0
                     for subp in worker_p.children(recursive=True):
                         is_busy = 1
-                        if subp.is_running() and time() - subp.create_time() > MAX_PROCESS_TIME:
+                        if subp.is_running() and time() - subp.create_time() > max_process_time:
                             is_hanged = 1
                             logger.info(f'Worker {worker.worker_id} is running for {time() - subp.create_time()} seconds. Terminating...')
                             nothrow_killpg(pid=subp.pid)

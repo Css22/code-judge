@@ -7,7 +7,7 @@ import subprocess
 import multiprocessing
 from time import sleep
 
-REDIS_PORT = 6379
+REDIS_PORT = 6388
 
 if os.environ.get('REDIS_URI') is None:
     os.environ['REDIS_URI'] = f'redis://localhost:{REDIS_PORT}/7'

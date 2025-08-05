@@ -302,6 +302,7 @@ with open('test.txt', 'w') as f:
     assert response.json()['success']
     assert response.json()['run_success']
 
+
 @pytest.mark.parametrize("type", ["judge", "run"])
 def test_io_invalid(test_client, type):
     from pathlib import Path
@@ -324,6 +325,7 @@ with open('../test.txt', 'w') as f:
     assert response.status_code == 200
 
     print(f"Jailbreak Status (Is sandbox enabled): {not Path('/tmp/test.txt').exists()}")
+
 
 @pytest.mark.parametrize("type", ["judge", "run"])
 def test_python_time_control(test_client, type):
@@ -369,6 +371,7 @@ time.sleep(60)
     if type == 'run':
         assert response.json()['stdout'].strip() == 'Suicide from timeout.'
 
+
 @pytest.mark.parametrize("type", ["judge", "run"])
 @pytest.mark.parametrize("batch_type", ["batch", "long-batch"])
 def test_python_time_control_batch(test_client, type, batch_type):
@@ -408,6 +411,7 @@ print(result)""",
     assert not results[1]['success']
     assert not results[1]['run_success']
     assert results[1]['reason'] == 'worker_timeout'
+
 
 @pytest.mark.parametrize("type", ["judge", "run"])
 @pytest.mark.parametrize("batch_type", ["batch", "long-batch"])
@@ -449,6 +453,7 @@ print(result)""",
     assert  results[0]['run_success']
     assert not results[1]['success']
     assert not results[1]['run_success']
+
 
 @pytest.mark.parametrize("type", ["judge", "run"])
 def test_python_cpu_core_limit(test_client, type):
@@ -495,6 +500,7 @@ if __name__ == "__main__":
     assert response.json()['success']
     assert response.json()['run_success']
 
+
 @pytest.mark.parametrize("type", ["judge", "run"])
 def test_python_cpu_core_limit_exceed(test_client, type):
     code = """
@@ -538,6 +544,7 @@ if __name__ == "__main__":
     assert response.status_code == 200
     assert response.json()['success']
     assert response.json()['run_success']
+
     
 @pytest.mark.parametrize("type", ["judge", "run"])
 @pytest.mark.parametrize("batch_type", ["batch", "long-batch"])
