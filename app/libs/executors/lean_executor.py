@@ -7,6 +7,12 @@ from pathlib import Path
 from .executor import ScriptExecutor, ProcessExecuteResult, TIMEOUT_EXIT_CODE
 
 # Add necessary extenstional libraries
+EXTRA_TOML = """
+[[require]]
+name  = "mathlib"
+scope = "leanprover-community"
+"""
+
 PRE_TEMPLATE = f"""
 import Mathlib
 """.strip()
@@ -39,7 +45,11 @@ class LeanExecutor(ScriptExecutor):
     def setup_command(self, tmp_path: str, script: str):
         
         self.lean_initialization(tmp_path)
-        
+        toml_file  = f'{tmp_path}/lakefile.toml'
+        with open(toml_file, 'a') as f:
+            f.write(EXTRA_TOML)
+            f.flush()
+            
         source_path = f"{tmp_path}/LeanCode/Basic.lean"
         with open(source_path, mode='w') as f:
             f.write(PRE_TEMPLATE.format(timeout=self.timeout, memory_limit=self.memory_limit, cpu_core=self.cpu_core))
@@ -67,4 +77,5 @@ class LeanExecutor(ScriptExecutor):
         #         if line.startswith(DURATION_MARK):
         #             result.cost = float(line[len(DURATION_MARK):])
         #             break
+        print(result)
         return result

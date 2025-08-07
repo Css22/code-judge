@@ -10,7 +10,7 @@ import app.config as app_config
 
 class Submission(BaseModel):
     sub_id: str | None = None
-    type: Literal['python', 'cpp', 'math']
+    type: Literal['python', 'cpp', 'math', 'lean']
     options: dict[str, str] | None = None
     solution: str
     input: str | None = None
