@@ -17,6 +17,7 @@ from app.libs.executors.executor import ProcessExecuteResult
 from app.model import Submission, SubmissionResult, WorkPayload, ResultReason
 from app.libs.executors.python_executor import PythonExecutor, ScriptExecutor
 from app.libs.executors.cpp_executor import CppExecutor
+from app.libs.executors.lean_executor import LeanExecutor
 from app.libs.executors.executor import TIMEOUT_EXIT_CODE
 import app.config as app_config
 from app.work_queue import connect_queue
@@ -61,6 +62,13 @@ def executor_factory(type: str, timeout: int, memory_limit: int, cpu_core: int) 
         return CppExecutor(
             compiler_cl=app_config.CPP_COMPILE_COMMAND,
             run_cl=app_config.CPP_EXECUTE_COMMAND,
+            timeout=timeout,
+            memory_limit=memory_limit * 1024 * 1024,
+            cpu_core=cpu_core
+        )
+    elif type == 'lean':
+        return LeanExecutor(
+            run_cl=app_config.LEAN_COMPILER_COMMAND,
             timeout=timeout,
             memory_limit=memory_limit * 1024 * 1024,
             cpu_core=cpu_core
