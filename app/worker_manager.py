@@ -84,6 +84,9 @@ def judge(sub: Submission):
 
         success = result.success
         run_success = result.success
+        if sub.type == 'lean' and not sub.expected_output:
+            # default expected output for lean
+            sub.expected_output = 'pass' 
         if sub.expected_output is not None:
             success = success and result.stdout.strip() == sub.expected_output.strip()
         if not success:
@@ -95,7 +98,7 @@ def judge(sub: Submission):
             stdout=result.stdout[:app_config.MAX_STDOUT_ERROR_LENGTH]
                 if result.stdout is not None else None,
             stderr=result.stderr[:app_config.MAX_STDOUT_ERROR_LENGTH]
-                if result.stdout is not None else None,
+                if result.stderr is not None else None,
             reason=ResultReason.WORKER_TIMEOUT
                 if result.exit_code == TIMEOUT_EXIT_CODE
                 else ResultReason.UNSPECIFIED

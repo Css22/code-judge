@@ -1,26 +1,17 @@
-from contextlib import contextmanager
+
+import json
 import tempfile
 import io
 import shlex
 import subprocess, shutil, sys, textwrap
 from pathlib import Path
 from .executor import ScriptExecutor, ProcessExecuteResult, TIMEOUT_EXIT_CODE
-
+from contextlib import contextmanager
 # Add necessary extenstional libraries
-EXTRA_TOML = """
-[[require]]
-name  = "mathlib"
-scope = "leanprover-community"
-"""
-
 PRE_TEMPLATE = f"""
 import Mathlib
 """.strip()
 
-# Avoid import error
-POST_TEMPLATE = f"""
-def hello := "world"
-""".strip()
 class LeanExecutor(ScriptExecutor):
     def __init__(self, run_cl: str, timeout: int = None, memory_limit: int = None, cpu_core: int = None):
         self.timeout = timeout
@@ -32,34 +23,23 @@ class LeanExecutor(ScriptExecutor):
         self.run_cl = run_cl
         self.cpu_core = cpu_core
     
-    def lean_initialization(self, tmp_path: str):
-        # lean initialization
-        root = Path(tmp_path)
-        init_command = ['lake', 'init', 'LeanCode']
-
-        result = subprocess.run(init_command, cwd=root, capture_output=True, text=True)
-
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to initialize Lean project: {result.stderr}")
 
     def setup_command(self, tmp_path: str, script: str):
         
-        self.lean_initialization(tmp_path)
-        toml_file  = f'{tmp_path}/lakefile.toml'
-        with open(toml_file, 'a') as f:
-            f.write(EXTRA_TOML)
-            f.flush()
-            
-        source_path = f"{tmp_path}/LeanCode/Basic.lean"
+        source_path = f"{tmp_path}/code.lean"
         with open(source_path, mode='w') as f:
-            f.write(PRE_TEMPLATE.format(timeout=self.timeout, memory_limit=self.memory_limit, cpu_core=self.cpu_core))
+            f.write(PRE_TEMPLATE)
             f.write("\n")
             f.write(script)
-            f.write("\n")
-            f.write(POST_TEMPLATE)
             f.flush()
 
-        lean_cmd = shlex.split(self.run_cl)      
+        # generate the json file for REPL
+        json_str = f'{{"path": "{source_path}", "allTactics": false}}'
+        
+        lean_cmd = shlex.split(self.run_cl.format(
+            json=shlex.quote(json_str),
+            workdir=shlex.quote(str(tmp_path))
+        ))      
 
         quota = int(round(self.cpu_core * 100))
         systemd_prefix = [
@@ -71,11 +51,38 @@ class LeanExecutor(ScriptExecutor):
         yield cmd
 
     def process_result(self, result):
-        # if SCRIPT_ENDING_MARK in result.stdout:
-        #     result.stdout, meta_info = result.stdout.split(SCRIPT_ENDING_MARK, 2)
-        #     for line in io.StringIO(meta_info):
-        #         if line.startswith(DURATION_MARK):
-        #             result.cost = float(line[len(DURATION_MARK):])
-        #             break
-        print(result)
+        try:
+            if result.stderr and result.stderr.strip():
+                return result
+            
+            stdout_text = (result.stdout or "").strip()
+
+            if not stdout_text:
+                # If stdout is empty, return an error result
+                err_msg = "empty stdout from REPL"
+                result.stderr = err_msg
+                return result
+            
+            data = json.loads(stdout_text)
+            
+            sorries = data.get('sorries', [])
+            messages = data.get("messages", []) or []
+            
+            errors = []
+            for msg in messages:
+                if msg.get("severity")  == "error":
+                    errors.append(msg)
+
+            # If there are any errors or sorries, return false      
+            if len(sorries) > 0 or len(errors) > 0:
+                result.stderr = result.stdout
+                result.stdout =  'fail'
+            else:
+                result.stdout = 'pass'
+            
+
+        except Exception as e:
+            result.stderr = f"Error processing result: {e}"
+            return result
+        
         return result

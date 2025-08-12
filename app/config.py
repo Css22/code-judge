@@ -4,6 +4,12 @@ from app.version import __version__ as version
 
 env = os.environ.get
 
+WORKDIR = env('WORKDIR', os.getcwd())  
+# the working directory for the application
+
+LEAN_WORKDIR = env('LEAN_WORKDIR', f'{WORKDIR}/app/libs/external_repository/repl')
+# the working directory for REPL
+
 ERROR_CASE_SAVE_PATH = env('ERROR_CASE_SAVE_PATH', '')  # default empty, which means not save error case
 
 MAX_STDOUT_ERROR_LENGTH = int(env('MAX_STDOUT_ERROR_LENGTH', 1000))
@@ -41,7 +47,12 @@ LEAN_COMPILER_PATH = env('LEAN_COMPILER_PATH', 'lake')
 PYTHON_EXECUTE_COMMAND = env('PYTHON_EXECUTE_COMMAND', f'{PYTHON_EXECUTOR_PATH} {{source}}')
 CPP_COMPILE_COMMAND = env('CPP_COMPILE_COMMAND', f'{CPP_COMPILER_PATH} -O2 -o {{exe}} {{source}}')
 CPP_EXECUTE_COMMAND = env('CPP_EXECUTE_COMMAND', '{exe}')
-LEAN_COMPILER_COMMAND = env('LEAN_COMPILER_COMMAND', f'{LEAN_COMPILER_PATH} build')
+LEAN_COMPILER_COMMAND = env(
+    'LEAN_COMPILER_COMMAND',
+    'bash -lc "cd ' + LEAN_WORKDIR + ' && (echo $1; echo) | ' + LEAN_COMPILER_PATH + ' exe repl" _ {json}'
+)
+
+
 
 # TODO: support fakeredis for testing.
 REDIS_URI = env('REDIS_URI', '')
