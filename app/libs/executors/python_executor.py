@@ -42,7 +42,7 @@ def _exec_prepare():
         soft, hard = resource.getrlimit(resource.RLIMIT_CPU)
         resource.setrlimit(resource.RLIMIT_CPU, (seconds, hard))
         # Just use its default behavior to terminate the process.
-        # signal.signal(signal.SIGXCPU, _exec_time_exceeded)       
+        # signal.signal(signal.SIGXCPU, _exec_time_exceeded)
 
     def _exec_limit_memory(maxsize):
         soft, hard = resource.getrlimit(resource.RLIMIT_AS)
@@ -90,7 +90,7 @@ class PythonExecutor(ScriptExecutor):
     def setup_command(self, tmp_path: str, script: str):
         source_path = f"{tmp_path}/source.py"
         with open(source_path, mode='w') as f:
-            f.write(PRE_TEMPLATE.format(timeout=self.timeout, memory_limit=self.memory_limit, cpu_core=self.cpu_core))
+            f.write(PRE_TEMPLATE.format(timeout=self.timeout, memory_limit=self.memory_limit))
             f.write("\n")
             f.write(script)
             f.write("\n")

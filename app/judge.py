@@ -36,6 +36,7 @@ async def judge(redis_queue: RedisQueue, submission: Submission):
         payload_json = payload.model_dump_json()
         await redis_queue.pqueue.push(app_config.REDIS_WORK_QUEUE_NAME, {payload_json: time()})
         result_queue_name = f'{app_config.REDIS_RESULT_PREFIX}{payload.work_id}'
+        # Derive from config.py: MAX_QUEUE_WAIT_TIME = MAX_EXECUTION_TIME + 5 + MAX_QUEUE_WORK_LIFE_TIME
         submission_wait_time = submission.timeout + 5 + app_config.MAX_QUEUE_WORK_LIFE_TIME
         max_wait_time = submission_wait_time  if submission_wait_time  > app_config.MAX_QUEUE_WAIT_TIME else app_config.MAX_QUEUE_WAIT_TIME
        
