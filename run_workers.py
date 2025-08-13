@@ -19,7 +19,7 @@ if __name__ == '__main__':
     config_yaml_path = args.config_yaml_path
 
     logging.info(f"Initializing workers from {config_yaml_path} ...")
-    bootstrap_workers_from_yaml(config_yaml_path, state_dir='state')
+    bootstrap_workers_from_yaml(config_yaml_path)
     logging.info("Workers initialized successfully.")
     work_manager = WorkerManager()
     work_manager.run()

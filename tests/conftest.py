@@ -44,7 +44,7 @@ def test_client():
         from app.worker_manager import WorkerManager
         from app.worker_bootstrap import bootstrap_workers_from_yaml
         
-        bootstrap_workers_from_yaml('config.yaml', state_file='state.json')
+        bootstrap_workers_from_yaml('config.yaml')
         work_manager = WorkerManager()
         work_manager.run()
 
