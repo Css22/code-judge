@@ -115,7 +115,7 @@ def judge(sub: Submission):
 class Worker(Process):
     def __init__(self, shared_dict: dict):
         super().__init__()
-        # local woker use shared_dict to set the timeout
+        # local woker use shared_dict to set the timeout, which is used by WorkerManager then
         self.shared = shared_dict  
         self.worker_id = str(uuid.uuid4())
         
