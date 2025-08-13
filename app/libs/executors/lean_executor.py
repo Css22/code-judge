@@ -23,9 +23,7 @@ class LeanExecutor(ScriptExecutor):
         self.run_cl = run_cl
         self.cpu_core = cpu_core
     
-
     def setup_command(self, tmp_path: str, script: str):
-        
         source_path = f"{tmp_path}/code.lean"
         with open(source_path, mode='w') as f:
             f.write(PRE_TEMPLATE)
@@ -64,7 +62,6 @@ class LeanExecutor(ScriptExecutor):
                 return result
             
             data = json.loads(stdout_text)
-            
             sorries = data.get('sorries', [])
             messages = data.get("messages", []) or []
             
@@ -79,8 +76,6 @@ class LeanExecutor(ScriptExecutor):
                 result.stdout =  'fail'
             else:
                 result.stdout = 'pass'
-            
-
         except Exception as e:
             result.stderr = f"Error processing result: {e}"
             return result

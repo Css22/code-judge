@@ -631,6 +631,7 @@ if __name__ == "__main__":
     assert results[1]['success']
     assert results[1]['run_success']
 
+
 @pytest.mark.parametrize("type", ["run"])
 def test_lean_error_fail(test_client, type):
     code = """
@@ -858,7 +859,7 @@ theorem mathd_algebra_80 (x : ℝ) (h₀ : x ≠ -1) (h₁ : (x - 9) / (x + 1) =
 
 @pytest.mark.parametrize("type", ["run"])
 @pytest.mark.parametrize("batch_type", ["batch", "long-batch"])
-def test_python_memory_limit_batch(test_client, type, batch_type):
+def test_lean_batch(test_client, type, batch_type):
     data = {
         'type': 'batch',
         "submissions": [{

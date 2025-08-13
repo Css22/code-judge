@@ -13,6 +13,7 @@ import yaml
 
 LOG_PREFIX = "[bootstrap]"
 
+
 def read_yaml(path: Path) -> Dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as f:
@@ -23,10 +24,12 @@ def read_yaml(path: Path) -> Dict[str, Any]:
 
     return data
 
-def hash_dict(d: Dict[str, Any]) -> str:
+
+def hash_dict(setups: Dict[str, Any]) -> str:
     # Serialized hash as fingerprint
-    payload = json.dumps(d, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    payload = json.dumps(setups, sort_keys=True, ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
 
 def load_state(state_file: Path) -> Dict[str, Any]:
     if state_file.exists():
@@ -36,16 +39,21 @@ def load_state(state_file: Path) -> Dict[str, Any]:
             pass
     return {}
 
+
 def save_state(state_file: Path, state: Dict[str, Any]) -> None:
     state_file.parent.mkdir(parents=True, exist_ok=True)
-    state_file.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+    state_file.write_text(
+        json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
 
 def exec_shell(cmd: str, env: Dict[str, str], cwd: Path) -> None:
     bash = os.environ.get("SHELL", "/bin/bash")
     full = [bash, "-lc", cmd]
     completed = subprocess.run(full, cwd=str(cwd), env=env)
     if completed.returncode != 0:
-        raise RuntimeError(f'failed to execute command: {cmd} (exit={completed.returncode})')
+        raise RuntimeError(f"failed to execute command: {cmd} (exit={completed.returncode})")
+
 
 def run_step(step: Dict[str, Any], env: Dict[str, str], workdir: Path) -> None:
     stype = step.get("type")
@@ -59,8 +67,7 @@ def run_step(step: Dict[str, Any], env: Dict[str, str], workdir: Path) -> None:
         raise ValueError(f"unknow: {stype}")
 
 
-
-def bootstrap_workers_from_yaml(yaml_path: str, state_file: str='.state/state.json') -> None:
+def bootstrap_workers_from_yaml(yaml_path: str, state_file: str = ".state/state.json") -> None:
     # yaml_path is the path to the YAML configuration file and used to initialize workers.
     # state_file is the path to the state file and used to avoid repeated initialization.
     yaml_path = Path(yaml_path)
@@ -70,14 +77,14 @@ def bootstrap_workers_from_yaml(yaml_path: str, state_file: str='.state/state.js
         raise FileNotFoundError(f"not yaml file: {yaml_path}")
 
     cfg = read_yaml(yaml_path)
-    tools = (cfg.get("tools") or {})
+    tools = cfg.get("tools") or {}
 
     state = load_state(state_file)
 
     workdir = Path.cwd()
 
     for name, node in tools.items():
-        logging.info(f'{LOG_PREFIX} initializing {name} ...')
+        logging.info(f"{LOG_PREFIX} initializing {name} ...")
         steps = node.get("setup", []) or []
         ex_env = os.environ.copy()
 
@@ -98,5 +105,3 @@ def bootstrap_workers_from_yaml(yaml_path: str, state_file: str='.state/state.js
         # update state
         state[name] = {"applied_sig": sig}
         save_state(state_file, state)
-
-    print(f"{LOG_PREFIX} 完成初始化：{yaml_path}")
