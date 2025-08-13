@@ -1,0 +1,28 @@
+# worker.default.yaml
+# If you need any other external repository support, please place it in app/libs/external_repository
+tools:
+  python:
+    setup:
+  cpp:
+    setup:
+  lean:
+    setup:
+      - type: shell
+        name: "git clone external repository repl"
+        run: |
+          cd app/libs/external_repository/
+          git clone https://github.com/leanprover-community/repl.git
+      - type: shell
+        name: "write dependency to lakefile.toml for repl"
+        run: |
+          cd app/libs/external_repository/repl
+          echo '' >> lakefile.toml
+          echo '[[require]]' >> lakefile.toml
+          echo 'name = "mathlib"' >> lakefile.toml
+          echo 'scope = "leanprover-community"' >> lakefile.toml
+      - type: shell
+        name: "build repl"
+        run: |
+          cd app/libs/external_repository/repl
+          lake update
+          lake build repl

@@ -5,3 +5,4 @@ error_cases/
 redisdb/
 .coverage
 **/external_repository/
+.state/

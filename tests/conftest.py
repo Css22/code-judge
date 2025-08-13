@@ -7,7 +7,7 @@ import subprocess
 import multiprocessing
 from time import sleep
 
-REDIS_PORT = 6388
+REDIS_PORT = 6379
 
 if os.environ.get('REDIS_URI') is None:
     os.environ['REDIS_URI'] = f'redis://localhost:{REDIS_PORT}/7'
@@ -42,7 +42,9 @@ def test_client():
         os.setsid()  # new process group
         # Start the workers
         from app.worker_manager import WorkerManager
-
+        from app.worker_bootstrap import bootstrap_workers_from_yaml
+        
+        bootstrap_workers_from_yaml('config.yaml', state_file='state.json')
         work_manager = WorkerManager()
         work_manager.run()
 
