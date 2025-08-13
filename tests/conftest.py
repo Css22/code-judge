@@ -9,14 +9,14 @@ from time import sleep
 
 REDIS_PORT = 6379
 
-if os.environ.get('REDIS_URI') is None:
-    os.environ['REDIS_URI'] = f'redis://localhost:{REDIS_PORT}/7'
+if os.environ.get("REDIS_URI") is None:
+    os.environ["REDIS_URI"] = f"redis://localhost:{REDIS_PORT}/7"
 
-os.environ['RUN_WORKERS'] = '0'
-os.environ['MAX_WORKERS'] = '4'
+os.environ["RUN_WORKERS"] = "0"
+os.environ["MAX_WORKERS"] = "4"
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def test_client():
     """
     Create a test client for the FastAPI app.
@@ -27,7 +27,7 @@ def test_client():
 
     def _start_fake_redis():
         fakeredis.TcpFakeServer.allow_reuse_address = True
-        server = fakeredis.TcpFakeServer(('localhost', REDIS_PORT))
+        server = fakeredis.TcpFakeServer(("localhost", REDIS_PORT))
         server.serve_forever()
 
     # blpop will make the server blocks, and hard to kill
@@ -43,8 +43,8 @@ def test_client():
         # Start the workers
         from app.worker_manager import WorkerManager
         from app.worker_bootstrap import bootstrap_workers_from_yaml
-        
-        bootstrap_workers_from_yaml('config.yaml')
+
+        bootstrap_workers_from_yaml("config.yaml")
         work_manager = WorkerManager()
         work_manager.run()
 
