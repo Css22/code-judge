@@ -56,6 +56,7 @@ def _exec_prepare():
     if {{memory_limit}}:
         _exec_limit_memory({{memory_limit}})
 
+
     return time.perf_counter()
 
 _exec_time_start = _exec_prepare()
@@ -76,7 +77,7 @@ _exec_end()
 """.strip()
 
 class PythonExecutor(ScriptExecutor):
-    def __init__(self, run_cl: str, timeout: int = None, memory_limit: int = None):
+    def __init__(self, run_cl: str, timeout: int = None, memory_limit: int = None, cpu_core: int = None):
         self.timeout = timeout
         self.memory_limit = (
             memory_limit + 128 * 1024 * 1024  # extra 128MB for python overhead
@@ -84,6 +85,7 @@ class PythonExecutor(ScriptExecutor):
             else None
         )
         self.run_cl = run_cl
+        self.cpu_core = cpu_core
 
     def setup_command(self, tmp_path: str, script: str):
         source_path = f"{tmp_path}/source.py"
@@ -94,10 +96,20 @@ class PythonExecutor(ScriptExecutor):
             f.write("\n")
             f.write(POST_TEMPLATE)
             f.flush()
-        yield shlex.split(self.run_cl.format(
+
+        python_cmd =  shlex.split(self.run_cl.format(
             source=shlex.quote(source_path),
             workdir=shlex.quote(str(tmp_path))
         ))
+
+        quota = int(round(self.cpu_core * 100))
+        systemd_prefix = [
+            "systemd-run", "--user", "--scope", "--quiet",
+            "-p", f"CPUQuota={quota}%"
+        ]
+
+        cmd = systemd_prefix + python_cmd
+        yield cmd
 
     def process_result(self, result):
         if SCRIPT_ENDING_MARK in result.stdout:

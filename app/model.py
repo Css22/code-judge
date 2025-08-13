@@ -1,3 +1,4 @@
+
 from enum import Enum
 from typing import Literal
 import uuid
@@ -5,6 +6,7 @@ from time import time
 
 from pydantic import BaseModel, Field
 
+import app.config as app_config
 
 class Submission(BaseModel):
     sub_id: str | None = None
@@ -13,6 +15,11 @@ class Submission(BaseModel):
     solution: str
     input: str | None = None
     expected_output: str | None = None
+
+    #Resource fields
+    timeout: int | None = app_config.MAX_EXECUTION_TIME
+    cpu_core : int | None = 1 
+    memory_limit : int | None = app_config.MAX_MEMORY
 
     def model_post_init(self, __context):
         self.sub_id = self.sub_id or str(uuid.uuid4())

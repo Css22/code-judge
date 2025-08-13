@@ -24,7 +24,7 @@ def _to_result(submission: Submission, start_time: float, result_json: tuple[str
         return SubmissionResult(sub_id=submission.sub_id, run_success=False, success=False, cost=time() - start_time, reason=ResultReason.QUEUE_TIMEOUT)
     else:
         result = SubmissionResult.model_validate_json(result_json[1])
-        if not result.run_success and result.cost >= app_config.MAX_EXECUTION_TIME:
+        if not result.run_success and result.cost >= submission.timeout:
             result.reason = ResultReason.WORKER_TIMEOUT
         return result
 
@@ -36,7 +36,11 @@ async def judge(redis_queue: RedisQueue, submission: Submission):
         payload_json = payload.model_dump_json()
         await redis_queue.pqueue.push(app_config.REDIS_WORK_QUEUE_NAME, {payload_json: time()})
         result_queue_name = f'{app_config.REDIS_RESULT_PREFIX}{payload.work_id}'
-        result_json = await redis_queue.queue.block_pop(result_queue_name, timeout=app_config.MAX_QUEUE_WAIT_TIME)
+        # align with the computation of MAX_QUEUE_WAIT_TIME in config.py: MAX_QUEUE_WAIT_TIME = MAX_EXECUTION_TIME + 5 + MAX_QUEUE_WORK_LIFE_TIME
+        submission_wait_time = submission.timeout + 5 + app_config.MAX_QUEUE_WORK_LIFE_TIME
+        max_wait_time = submission_wait_time  if submission_wait_time  > app_config.MAX_QUEUE_WAIT_TIME else app_config.MAX_QUEUE_WAIT_TIME
+       
+        result_json = await redis_queue.queue.block_pop(result_queue_name, timeout=max_wait_time)
         await redis_queue.delete(result_queue_name)
         return _to_result(submission, start_time, result_json)
     except Exception:
@@ -46,8 +50,13 @@ async def judge(redis_queue: RedisQueue, submission: Submission):
 
 async def _judge_batch_impl(redis_queue: RedisQueue, subs: list[Submission], long_batch=False):
     start_time = time()
-    max_wait_time = app_config.LONG_BATCH_MAX_QUEUE_WAIT_TIME \
-        if long_batch else app_config.MAX_QUEUE_WAIT_TIME
+    # Provide the max_wait_time for the batch processing
+    max_wait_time = app_config.LONG_BATCH_MAX_QUEUE_WAIT_TIME if long_batch else app_config.MAX_QUEUE_WAIT_TIME
+    for sub in subs:
+        sub_wait_time = sub.timeout + 5 + app_config.MAX_QUEUE_WORK_LIFE_TIME
+        if sub_wait_time > max_wait_time:
+            max_wait_time = sub_wait_time
+
     batch_chunk_size = app_config.MAX_LONG_BATCH_CHUNK_SIZE \
         if long_batch else app_config.MAX_BATCH_CHUNK_SIZE
     # use a hash tag to make sure all payloads are in the same slot in redis cluster
@@ -73,7 +82,7 @@ async def _judge_batch_impl(redis_queue: RedisQueue, subs: list[Submission], lon
     async def _pop_results(queue_names: list[str], timeout: int):
         name_results = await _sync_pop(queue_names)
         if not name_results and timeout > 0:
-            name_results = await _async_pop(queue_names, min(timeout, app_config.MAX_PROCESS_TIME))
+            name_results = await _async_pop(queue_names, timeout)
         return name_results
 
     async def _get_result(payloads: list[WorkPayload], max_chunk_wait_time):
@@ -111,7 +120,7 @@ async def _judge_batch_impl(redis_queue: RedisQueue, subs: list[Submission], lon
                     # so we only wait for app_config.MAX_PROCESS_TIME for them to finish.
                     # if it is still not finished, we assume some error happened.
                     # and we can break the loop.
-                    if time() - start_working_time > app_config.MAX_PROCESS_TIME:
+                    if time() - start_working_time > max_chunk_wait_time:
                         logger.warning(f'No result for {len(left_result_queue_names)} submissions. '
                                        f'Assuming all submissions are timed out.')
                         logger.warning('This is mostly caused by redis OOM or workers killed or potential bug. ')
