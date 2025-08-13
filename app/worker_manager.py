@@ -84,7 +84,7 @@ def judge(sub: Submission):
             stdout=result.stdout[:app_config.MAX_STDOUT_ERROR_LENGTH]
                 if result.stdout is not None else None,
             stderr=result.stderr[:app_config.MAX_STDOUT_ERROR_LENGTH]
-                if result.stdout is not None else None,
+                if result.stderr is not None else None,
             reason=ResultReason.WORKER_TIMEOUT
                 if result.exit_code == TIMEOUT_EXIT_CODE
                 else ResultReason.UNSPECIFIED
