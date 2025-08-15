@@ -17,6 +17,7 @@ from app.libs.executors.executor import ProcessExecuteResult
 from app.model import Submission, SubmissionResult, WorkPayload, ResultReason
 from app.libs.executors.python_executor import PythonExecutor, ScriptExecutor
 from app.libs.executors.cpp_executor import CppExecutor
+from app.libs.executors.lean_executor import LeanExecutor
 from app.libs.executors.executor import TIMEOUT_EXIT_CODE
 import app.config as app_config
 from app.work_queue import connect_queue
@@ -65,6 +66,13 @@ def executor_factory(type: str, timeout: int, memory_limit: int, cpu_core: int) 
             memory_limit=memory_limit * 1024 * 1024,
             cpu_core=cpu_core
         )
+    elif type == 'lean':
+        return LeanExecutor(
+            run_cl=app_config.LEAN_COMPILER_COMMAND,
+            timeout=timeout,
+            memory_limit=memory_limit * 1024 * 1024,
+            cpu_core=cpu_core
+        )
     else:
         raise ValueError(f'Unsupported type: {type}')
 
@@ -76,6 +84,9 @@ def judge(sub: Submission):
 
         success = result.success
         run_success = result.success
+        if sub.type == 'lean' and not sub.expected_output:
+            # default expected output for lean
+            sub.expected_output = 'pass' 
         if sub.expected_output is not None:
             success = success and result.stdout.strip() == sub.expected_output.strip()
         if not success:
@@ -87,7 +98,7 @@ def judge(sub: Submission):
             stdout=result.stdout[:app_config.MAX_STDOUT_ERROR_LENGTH]
                 if result.stdout is not None else None,
             stderr=result.stderr[:app_config.MAX_STDOUT_ERROR_LENGTH]
-                if result.stdout is not None else None,
+                if result.stderr is not None else None,
             reason=ResultReason.WORKER_TIMEOUT
                 if result.exit_code == TIMEOUT_EXIT_CODE
                 else ResultReason.UNSPECIFIED

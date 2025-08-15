@@ -42,7 +42,9 @@ def test_client():
         os.setsid()  # new process group
         # Start the workers
         from app.worker_manager import WorkerManager
-
+        from app.worker_bootstrap import bootstrap_workers_from_yaml
+        
+        bootstrap_workers_from_yaml('config.yaml')
         work_manager = WorkerManager()
         work_manager.run()
 
