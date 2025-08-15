@@ -14,12 +14,15 @@ import Mathlib
 
 class LeanExecutor(ScriptExecutor):
     def __init__(self, run_cl: str, timeout: int = None, memory_limit: int = None, cpu_core: int = None):
+        # TODO: timeout and memory_limit have no effect currently
         self.timeout = timeout
         self.memory_limit = (
             memory_limit + 128 * 1024 * 1024  # extra 128MB for python overhead
             if memory_limit
             else None
         )
+        # the value of is set in worker_manager.py, based on the LEAN_COMPILER_COMMAND setting in config.py.
+        # It is used as the startup command of lean
         self.run_cl = run_cl
         self.cpu_core = cpu_core
     

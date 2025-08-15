@@ -4,11 +4,12 @@ from app.version import __version__ as version
 
 env = os.environ.get
 
-WORKDIR = env('WORKDIR', os.getcwd())  
 # the working directory for the application
+WORKDIR = env('WORKDIR', os.getcwd())  
 
-LEAN_WORKDIR = env('LEAN_WORKDIR', f'{WORKDIR}/app/libs/external_repository/repl')
 # the working directory for REPL
+LEAN_WORKDIR = env('LEAN_WORKDIR', f'{WORKDIR}/app/libs/external_repository/repl')
+
 
 ERROR_CASE_SAVE_PATH = env('ERROR_CASE_SAVE_PATH', '')  # default empty, which means not save error case
 
