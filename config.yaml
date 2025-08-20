@@ -8,6 +8,10 @@ tools:
   lean:
     setup:
       - type: shell
+        name: "create dir for external repository"
+        run: |
+          mkdir -p app/libs/external_repository 
+      - type: shell
         name: "git clone external repository repl"
         run: |
           cd app/libs/external_repository/
