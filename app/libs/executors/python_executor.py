@@ -101,14 +101,16 @@ class PythonExecutor(ScriptExecutor):
             source=shlex.quote(source_path),
             workdir=shlex.quote(str(tmp_path))
         ))
+        # Due to the unable of systemd-run in A100 node, we comment out this part
+        # quota = int(round(self.cpu_core * 100))
+        # systemd_prefix = [
+        #     "systemd-run", "--user", "--scope", "--quiet",
+        #     "-p", f"CPUQuota={quota}%"
+        # ]
 
-        quota = int(round(self.cpu_core * 100))
-        systemd_prefix = [
-            "systemd-run", "--user", "--scope", "--quiet",
-            "-p", f"CPUQuota={quota}%"
-        ]
+        # cmd = systemd_prefix + python_cmd
 
-        cmd = systemd_prefix + python_cmd
+        cmd = python_cmd
         yield cmd
 
     def process_result(self, result):

@@ -42,13 +42,17 @@ class LeanExecutor(ScriptExecutor):
             workdir=shlex.quote(str(tmp_path))
         ))      
 
-        quota = int(round(self.cpu_core * 100))
-        systemd_prefix = [
-            "systemd-run", "--user", "--scope", "--quiet",
-            "-p", f"CPUQuota={quota}%"
-        ]
+        # Due to the unable of systemd-run in A100 node, we comment out this part
 
-        cmd = systemd_prefix + lean_cmd
+        # quota = int(round(self.cpu_core * 100))
+        # systemd_prefix = [
+        #     "systemd-run", "--user", "--scope", "--quiet",
+        #     "-p", f"CPUQuota={quota}%"
+        # ]
+
+        # cmd = systemd_prefix + lean_cmd
+        cmd = lean_cmd
+
         yield cmd
 
     def process_result(self, result):
