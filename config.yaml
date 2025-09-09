@@ -14,8 +14,12 @@ tools:
       - type: shell
         name: "git clone external repository repl"
         run: |
-          cd app/libs/external_repository/
-          git clone https://github.com/leanprover-community/repl.git
+          if [ -d "app/libs/external_repository/repl/.git" ]; then
+            echo "[skip] repl already exists"
+          else
+            cd app/libs/external_repository/
+            git clone https://github.com/leanprover-community/repl.git
+          fi
       - type: shell
         name: "write dependency to lakefile.toml for repl"
         run: |

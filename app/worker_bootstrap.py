@@ -81,7 +81,7 @@ def bootstrap_workers_from_yaml(yaml_path: str, state_file: str = ".state/state.
 
     state = load_state(state_file)
 
-    workdir = Path.cwd()
+    workdir = yaml_path.parent.resolve()
 
     for name, node in tools.items():
         logging.info(f"{LOG_PREFIX} initializing {name} ...")
