@@ -49,8 +49,10 @@ def save_state(state_file: Path, state: Dict[str, Any]) -> None:
 
 def exec_shell(cmd: str, env: Dict[str, str], cwd: Path) -> None:
     bash = os.environ.get("SHELL", "/bin/bash")
+    qcwd = shlex.quote(str(cwd))
+    cmd = f"cd {qcwd} && {cmd}"
     full = [bash, "-lc", cmd]
-    completed = subprocess.run(full, cwd=str(cwd), env=env)
+    completed = subprocess.run(full, cwd='/home/bowenz/', env=env)
     if completed.returncode != 0:
         raise RuntimeError(f"failed to execute command: {cmd} (exit={completed.returncode})")
 
