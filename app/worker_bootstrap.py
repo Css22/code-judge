@@ -52,7 +52,7 @@ def exec_shell(cmd: str, env: Dict[str, str], cwd: Path) -> None:
     qcwd = shlex.quote(str(cwd))
     cmd = f"cd {qcwd} && {cmd}"
     full = [bash, "-lc", cmd]
-    completed = subprocess.run(full, cwd='/home/bowenz/', env=env)
+    completed = subprocess.run(full, cwd=str(cwd), env=env)
     if completed.returncode != 0:
         raise RuntimeError(f"failed to execute command: {cmd} (exit={completed.returncode})")
 
