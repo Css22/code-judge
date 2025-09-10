@@ -50,8 +50,10 @@ CPP_COMPILE_COMMAND = env('CPP_COMPILE_COMMAND', f'{CPP_COMPILER_PATH} -O2 -o {{
 CPP_EXECUTE_COMMAND = env('CPP_EXECUTE_COMMAND', '{exe}')
 LEAN_COMPILER_COMMAND = env(
     'LEAN_COMPILER_COMMAND',
-    'bash -lc "cd ' + LEAN_WORKDIR + ' && (echo $1; echo) | ' + LEAN_COMPILER_PATH + ' exe repl" _ {json}'
+    '/bin/bash --noprofile --norc -c "cd ' + LEAN_WORKDIR +
+    ' && (echo \"$1\"; echo) | ' + LEAN_COMPILER_PATH + ' exe repl" _ {json}'
 )
+
 
 
 
